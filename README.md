@@ -1,0 +1,1 @@
+Simple MEAN stack webapp for people to view and share images/location
