@@ -1,24 +1,15 @@
-import {
-  createBrowserRouter,
-  createRoutesFromElements,
-  Navigate,
-  Route,
-  RouterProvider,
-} from "react-router-dom";
-import Users from "./user/pages/Users";
-import NewPlace from "./places/pages/NewPlace";
+import { Outlet } from "react-router-dom";
+import MainNavigation from "./shared/components/Navigation/MainNavigation";
 
 const App = () => {
-  const router = createBrowserRouter(
-    createRoutesFromElements(
-      <Route path="/">
-        <Route index element={<Users />} />
-        <Route path="places/new" element={<NewPlace />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Route>
-    )
+  return (
+    <>
+      <MainNavigation />
+      <main>
+        <Outlet />
+      </main>
+    </>
   );
-  return <RouterProvider router={router} />;
 };
 
 export default App;
