@@ -12,12 +12,14 @@ import {
 import Users from "./user/pages/Users";
 import NewPlace from "./places/pages/NewPlace";
 import "./index.scss";
+import UserPlaces from "./places/pages/UserPlaces";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 const router = createBrowserRouter(
   createRoutesFromElements(
     <Route path="/" element={<App />}>
       <Route index element={<Users />} />
+      <Route path="/:userId/places" element={<UserPlaces />} />
       <Route path="places/new" element={<NewPlace />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Route>
