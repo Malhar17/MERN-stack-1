@@ -2,7 +2,7 @@ import React, { useState } from "react";
 
 import "./PlaceItem.scss";
 import Card from "../../shared/components/UIElements/Card";
-import Button from "../../shared/components/FormElements/Button/Button";
+import Button from "../../shared/components/FormElements/Button";
 import Modal from "../../shared/components/UIElements/Modal";
 import Map from "../../shared/components/UIElements/Map";
 
