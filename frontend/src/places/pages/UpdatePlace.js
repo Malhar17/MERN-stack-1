@@ -112,6 +112,7 @@ const UpdatePlace = (props) => {
         onInput={inputHandler}
         initialValue={formState.inputs.title.value}
         initialValid={formState.inputs.title.isValid}
+        errorText="Please enter a valid title"
       />
       <Input
         id="description"
@@ -121,6 +122,7 @@ const UpdatePlace = (props) => {
         onInput={inputHandler}
         initialValue={formState.inputs.description.value}
         initialValid={formState.inputs.description.isValid}
+        errorText="Please enter a valid description of min 5 characters"
       />
       <Button type="submit" disabled={!formState.isValid}>
         UPDATE PLACE
