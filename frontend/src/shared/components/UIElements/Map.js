@@ -18,7 +18,7 @@ const MapView = (props) => {
       }),
     ],
     view: new View({
-      center: [props.center.lng, props.center.lat],
+      center: [props.center.lon, props.center.lat],
       zoom: props.zoom,
     }),
   });
