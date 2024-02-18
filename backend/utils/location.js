@@ -8,13 +8,11 @@ async function getCoordsForAddress(address) {
   //     lat: 40.7484405,
   //     lon: -73.9878584,
   //   };
-  console.log("location", address);
   var config = {
     method: "get",
     url: `https://api.geoapify.com/v1/geocode/search?text=${address}&apiKey=${API_KEY}`,
     headers: {},
   };
-  console.log(config);
   let response;
   try {
     response = await axios(config);
@@ -23,7 +21,6 @@ async function getCoordsForAddress(address) {
     return {};
   }
   const data = response.data;
-  console.log(data);
   if (!data || data.features.length === 0) {
     throw new HttpError(
       "Could not find location for the specified address.",
