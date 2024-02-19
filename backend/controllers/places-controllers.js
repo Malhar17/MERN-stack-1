@@ -1,64 +1,52 @@
 const { validationResult } = require("express-validator");
 const { v4: uuid } = require("uuid");
+const mongoose = require("mongoose");
 
 const HttpError = require("../models/http-error");
 const getCoordsForAddress = require("../utils/location");
+const Place = require("../models/place");
+const User = require("../models/user");
 
-let DUMMY_PLACES = [
-  {
-    id: "p1",
-    title: "Empire State Building",
-    description: "One of the most famous sky scrapers in the world!",
-    imageUrl:
-      "https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/NYC_Empire_State_Building.jpg/640px-NYC_Empire_State_Building.jpg",
-    address: "20 W 34th St, New York, NY 10001",
-    location: {
-      lat: 40.7484405,
-      lon: -73.9878584,
-    },
-    creator: "u1",
-  },
-  {
-    id: "p2",
-    title: "Empire State Building",
-    description: "One of the most famous sky scrapers in the world!",
-    imageUrl:
-      "https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/NYC_Empire_State_Building.jpg/640px-NYC_Empire_State_Building.jpg",
-    address: "20 W 34th St, New York, NY 10001",
-    location: {
-      lat: 40.7484405,
-      lon: -73.9878584,
-    },
-    creator: "u2",
-  },
-];
-
-const getPlaceById = (req, res, next) => {
+const getPlaceById = async (req, res, next) => {
   const placeId = req.params.pid;
-  const place = DUMMY_PLACES.find((p) => p.id === placeId);
+  let place;
+  try {
+    place = await Place.findById(placeId);
+  } catch (error) {
+    return next(
+      new HttpError("Something went wrong, could not find a place.", 500)
+    );
+  }
   if (!place) {
     return next(
       new HttpError("Could not find a place for the provided id.", 404)
     );
   }
-  res.json({ place });
+  res.json({ place: place.toObject({ getters: true }) });
 };
 
-const getPlacesByUserId = (req, res, next) => {
+const getPlacesByUserId = async (req, res, next) => {
   const userId = req.params.uid;
-  const places = DUMMY_PLACES.filter((p) => p.creator === userId);
-  if (!places || places.length === 0) {
+
+  let user;
+  try {
+    user = await User.findById(userId).populate("places");
+  } catch (error) {
+    return next(
+      new HttpError("Fetching places failed, please try again error", 500)
+    );
+  }
+  if (!user || user.places.length === 0) {
     return next(
       new HttpError("Could not find a places for the provided user id.", 404)
     );
   }
-  res.json({ places });
+  res.json({ places: user.places.map((p) => p.toObject({ getters: true })) });
 };
 
 const createPlace = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    console.log(errors);
     return next(
       new HttpError("Invalid inputs passed, please check your data.", 422)
     );
@@ -70,46 +58,90 @@ const createPlace = async (req, res, next) => {
   } catch (error) {
     return next(error);
   }
-  const newPlace = {
-    id: uuid(),
+  const newPlace = new Place({
     title,
     description,
     address,
     location: coordinates,
     creator,
-  };
-  DUMMY_PLACES.push(newPlace);
+    image:
+      "https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/NYC_Empire_State_Building.jpg/640px-NYC_Empire_State_Building.jpg",
+  });
+
+  let user;
+  try {
+    user = await User.findById(creator);
+  } catch (error) {
+    return next(new HttpError("Creating place failed, please try again", 500));
+  }
+  if (!user) {
+    return next(new HttpError("Could not find user for provided id", 404));
+  }
+  try {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    await newPlace.save({ session });
+    user.places.push(newPlace);
+    await user.save({ session });
+    await session.commitTransaction();
+  } catch (error) {
+    return next(new HttpError("Creating place failed, please try again", 500));
+  }
   res.status(201).json(newPlace);
 };
 
-const updatePlace = (req, res, next) => {
+const updatePlace = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    console.log(errors);
     return next(
       new HttpError("Invalid inputs passed, please check your data.", 422)
     );
   }
   const { title, description } = req.body;
   const placeId = req.params.pid;
-  const placeIndex = DUMMY_PLACES.findIndex((p) => p.id === placeId);
-  console.log(placeIndex);
-  const updatedPlace = { ...DUMMY_PLACES[placeIndex] };
-  console.log(updatedPlace);
-  updatedPlace.title = title;
-  updatedPlace.description = description;
-  DUMMY_PLACES[placeIndex] = updatedPlace;
-  console.log(updatedPlace);
-  res.status(200).json({ place: updatedPlace });
-};
 
-const deletePlace = (req, res, next) => {
-  const placeId = req.params.pid;
-  if (!DUMMY_PLACES.find((p) => (p.id = placeId))) {
-    next(new HttpError("Could find place for the given id", 404));
+  let updatedPlace;
+  try {
+    updatedPlace = await Place.findById(placeId);
+  } catch (error) {
+    return next(
+      new HttpError("Something went wrong, could not update place.", 500)
+    );
   }
 
-  DUMMY_PLACES = DUMMY_PLACES.filter((p) => p.id !== placeId);
+  updatedPlace.title = title;
+  updatedPlace.description = description;
+
+  try {
+    await updatedPlace.save();
+  } catch (error) {
+    return next(
+      new HttpError("Something went wrong, could not update place", 500)
+    );
+  }
+
+  res.status(200).json({ place: updatedPlace.toObject({ getters: true }) });
+};
+
+const deletePlace = async (req, res, next) => {
+  const placeId = req.params.pid;
+
+  let place;
+
+  try {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    place = await Place.findByIdAndDelete(placeId, { session }).populate(
+      "creator"
+    );
+    place.creator.places.pull(place);
+    await place.creator.save({ session });
+    await session.commitTransaction();
+  } catch (error) {
+    return next(
+      new HttpError("Something went wrong, could not delete place.", 500)
+    );
+  }
   res.status(200).json({ message: "Deleted Place" });
 };
 
