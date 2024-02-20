@@ -9,15 +9,11 @@ const getUsers = async (req, res, next) => {
   try {
     users = await User.find({}, "-password");
   } catch (error) {
-    return next(
-      new HttpError("Fetching users failed, please try again later.", 500)
-    );
+    return next(new HttpError("Fetching users failed, please try again later.", 500));
   }
 
   if (!users) {
-    return next(
-      new HttpError("Fetching users failed, please try again later.", 422)
-    );
+    return next(new HttpError("Fetching users failed, please try again later.", 422));
   }
 
   res.json({ users: users.map((u) => u.toObject({ getters: true })) });
@@ -26,9 +22,7 @@ const getUsers = async (req, res, next) => {
 const signup = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return next(
-      new HttpError("Invalid inputs passed, please check your data.", 422)
-    );
+    return next(new HttpError("Invalid inputs passed, please check your data.", 422));
   }
 
   const { name, email, password } = req.body;
@@ -41,9 +35,7 @@ const signup = async (req, res, next) => {
   }
 
   if (existingUser) {
-    return next(
-      new HttpError("Could not create user, email already exists", 422)
-    );
+    return next(new HttpError("Could not create user, email already exists", 422));
   }
   const newUser = new User({
     name,
@@ -73,14 +65,9 @@ const login = async (req, res, next) => {
   }
 
   if (!user || user.password !== password) {
-    return next(
-      new HttpError(
-        "Could not identify user, credentials seem to be wrong",
-        401
-      )
-    );
+    return next(new HttpError("Could not identify user, credentials seem to be wrong", 401));
   }
-  res.json({ message: "Logged in" });
+  res.json({ message: "Logged in", user: user.toObject({ getters: true }) });
 };
 
 exports.getUsers = getUsers;
