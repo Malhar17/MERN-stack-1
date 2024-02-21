@@ -14,6 +14,7 @@ import ErrorModal from "../../shared/components/UIElements/ErrorModal";
 import LoadingSpinner from "../../shared/components/UIElements/LoadingSpinner";
 
 import "./Auth.scss";
+import ImageUpload from "../../shared/components/FormElements/ImageUpload";
 
 const Auth = (props) => {
   const [isLogin, setIsLogin] = useState(true);
@@ -39,6 +40,7 @@ const Auth = (props) => {
         {
           ...formState.inputs,
           name: undefined,
+          image: undefined,
         },
         formState.inputs.email.isValid && formState.inputs.password.isValid
       );
@@ -50,6 +52,10 @@ const Auth = (props) => {
             value: "",
             isValid: false,
           },
+          image: {
+            value: null,
+            isValid: false,
+          },
         },
         formState.inputs.email.isValid && formState.inputs.password.isValid
       );
@@ -59,6 +65,8 @@ const Auth = (props) => {
 
   const authSubmitHandler = async (event) => {
     event.preventDefault();
+
+    console.log(formState.inputs);
 
     if (isLogin) {
       try {
@@ -79,18 +87,16 @@ const Auth = (props) => {
       }
     } else {
       try {
+        const formData = new FormData();
+        formData.append("name", formState.inputs.name.value);
+        formData.append("image", formState.inputs.image.value);
+        formData.append("email", formState.inputs.email.value);
+        formData.append("password", formState.inputs.password.value);
         const data = await sendRequest(
           `${process.env.REACT_APP_SERVER_URL}/users/signup`,
 
           "POST",
-          JSON.stringify({
-            name: formState.inputs.name.value,
-            email: formState.inputs.email.value,
-            password: formState.inputs.password.value,
-          }),
-          {
-            "Content-Type": "application/json",
-          }
+          formData
         );
         auth.login(data.user.id);
       } catch (error) {
@@ -116,6 +122,14 @@ const Auth = (props) => {
               validators={[VALIDATOR_REQUIRE()]}
               errorText="Please enter a valid name"
               onInput={inputHandler}
+            />
+          )}
+          {!isLogin && (
+            <ImageUpload
+              id="image"
+              center
+              onInput={inputHandler}
+              errorText="Please provide an image"
             />
           )}
           <Input

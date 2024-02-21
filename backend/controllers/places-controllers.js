@@ -1,3 +1,4 @@
+const fs = require("fs");
 const { validationResult } = require("express-validator");
 const { v4: uuid } = require("uuid");
 const mongoose = require("mongoose");
@@ -53,8 +54,7 @@ const createPlace = async (req, res, next) => {
     address,
     location: coordinates,
     creator,
-    image:
-      "https://upload.wikimedia.org/wikipedia/commons/thumb/d/df/NYC_Empire_State_Building.jpg/640px-NYC_Empire_State_Building.jpg",
+    image: req.file.path.replace(/\\/g, "/"),
   });
 
   let user;
@@ -122,6 +122,9 @@ const deletePlace = async (req, res, next) => {
   } catch (error) {
     return next(new HttpError("Something went wrong, could not delete place.", 500));
   }
+  fs.unlink(place.image, (error) => {
+    console.log(error);
+  });
   res.status(200).json({ message: "Deleted Place" });
 };
 

@@ -20,6 +20,7 @@ const getUsers = async (req, res, next) => {
 };
 
 const signup = async (req, res, next) => {
+  console.log("signup");
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return next(new HttpError("Invalid inputs passed, please check your data.", 422));
@@ -37,12 +38,12 @@ const signup = async (req, res, next) => {
   if (existingUser) {
     return next(new HttpError("Could not create user, email already exists", 422));
   }
+  console.log(req.file.path);
   const newUser = new User({
     name,
     email,
     password,
-    image:
-      "https://images.pexels.com/photos/839011/pexels-photo-839011.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=750&w=1260",
+    image: req.file.path.replace(/\\/g, "/"),
     places: [],
   });
 
