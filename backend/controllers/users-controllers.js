@@ -1,4 +1,6 @@
 const { v4: uuid } = require("uuid");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 const { validationResult } = require("express-validator");
 const HttpError = require("../models/http-error");
 const User = require("../models/user");
@@ -39,10 +41,19 @@ const signup = async (req, res, next) => {
     return next(new HttpError("Could not create user, email already exists", 422));
   }
   console.log(req.file.path);
+
+  let hashedPassword;
+
+  try {
+    hashedPassword = await bcrypt.hash(password, 12);
+  } catch (error) {
+    return next(new HttpError("Could not create user, please try again", 500));
+  }
+
   const newUser = new User({
     name,
     email,
-    password,
+    password: hashedPassword,
     image: req.file.path.replace(/\\/g, "/"),
     places: [],
   });
@@ -53,7 +64,17 @@ const signup = async (req, res, next) => {
     return next(new HttpError("Signing up failed, please try again", 500));
   }
 
-  res.status(201).json({ user: newUser.toObject({ getters: true }) });
+  let token;
+
+  try {
+    token = jwt.sign({ userId: newUser.id, email: newUser.email }, process.env.TOKEN_PRIVATE_KEY, {
+      expiresIn: "1h",
+    });
+  } catch (error) {
+    return next(new HttpError("Signing up failed, please try again", 500));
+  }
+
+  res.status(201).json({ userId: newUser.id, email: newUser.email, token: token });
 };
 
 const login = async (req, res, next) => {
@@ -64,11 +85,31 @@ const login = async (req, res, next) => {
   } catch (error) {
     return next(new HttpError("Logging in failed, please try again", 500));
   }
-
-  if (!user || user.password !== password) {
-    return next(new HttpError("Could not identify user, credentials seem to be wrong", 401));
+  if (!user) {
+    return next(new HttpError("Logging in failed, please try again", 401));
   }
-  res.json({ message: "Logged in", user: user.toObject({ getters: true }) });
+  let isValidPassword;
+  try {
+    isValidPassword = await bcrypt.compare(password, user.password);
+  } catch (error) {
+    return next(new HttpError("Could not identify user, credentials seem to be wrong", 500));
+  }
+
+  if (!isValidPassword) {
+    return next(new HttpError("Could not identify user, credentials seem to be wrong", 500));
+  }
+
+  let token;
+
+  try {
+    token = jwt.sign({ userId: user.id, email: user.email }, process.env.TOKEN_PRIVATE_KEY, {
+      expiresIn: "1h",
+    });
+  } catch (error) {
+    return next(new HttpError("Logging in failed, please try again", 500));
+  }
+
+  res.json({ userId: user.id, email: user.email, token: token });
 };
 
 exports.getUsers = getUsers;

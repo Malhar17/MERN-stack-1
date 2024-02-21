@@ -81,7 +81,7 @@ const Auth = (props) => {
             "Content-Type": "application/json",
           }
         );
-        auth.login(data.user.id);
+        auth.login(data.userId, data.token);
       } catch (error) {
         console.log("error: ", error);
       }
@@ -98,7 +98,7 @@ const Auth = (props) => {
           "POST",
           formData
         );
-        auth.login(data.user.id);
+        auth.login(data.userId, data.token);
       } catch (error) {
         console.log("error: ", error);
       }

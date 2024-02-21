@@ -41,7 +41,7 @@ const createPlace = async (req, res, next) => {
   if (!errors.isEmpty()) {
     return next(new HttpError("Invalid inputs passed, please check your data.", 422));
   }
-  const { title, description, address, creator } = req.body;
+  const { title, description, address } = req.body;
   let coordinates;
   try {
     coordinates = await getCoordsForAddress(address);
@@ -53,13 +53,13 @@ const createPlace = async (req, res, next) => {
     description,
     address,
     location: coordinates,
-    creator,
+    creator: req.userData.userId,
     image: req.file.path.replace(/\\/g, "/"),
   });
 
   let user;
   try {
-    user = await User.findById(creator);
+    user = await User.findById(req.userData.userId);
   } catch (error) {
     return next(new HttpError("Creating place failed, please try again", 500));
   }
@@ -87,30 +87,42 @@ const updatePlace = async (req, res, next) => {
   const { title, description } = req.body;
   const placeId = req.params.pid;
 
-  let updatedPlace;
-  console.log(placeId);
+  let place;
   try {
-    updatedPlace = await Place.findById(placeId);
+    place = await Place.findById(placeId);
   } catch (error) {
     return next(new HttpError("Something went wrong, could not update place.", 500));
   }
 
-  updatedPlace.title = title;
-  updatedPlace.description = description;
+  if (place.creator.toString() !== req.userData.userId) {
+    return next(new HttpError("You are not allowed to edit this place.", 401));
+  }
+
+  place.title = title;
+  place.description = description;
 
   try {
-    await updatedPlace.save();
+    await place.save();
   } catch (error) {
     return next(new HttpError("Something went wrong, could not update place", 500));
   }
 
-  res.status(200).json({ place: updatedPlace.toObject({ getters: true }) });
+  res.status(200).json({ place: place.toObject({ getters: true }) });
 };
 
 const deletePlace = async (req, res, next) => {
   const placeId = req.params.pid;
 
   let place;
+  try {
+    place = await Place.findById(placeId);
+  } catch (error) {
+    return next(new HttpError("Something went wrong, could not update place.", 500));
+  }
+
+  if (place.creator.toString() !== req.userData.userId) {
+    return next(new HttpError("You are not allowed to delete this place.", 401));
+  }
 
   try {
     const session = await mongoose.startSession();
